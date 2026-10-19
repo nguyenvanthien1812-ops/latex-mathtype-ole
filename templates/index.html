@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>LaTeX → MathType (Word)</title>
+<script>
+  window.MathJax = { tex: { inlineMath: [['$', '$']] }, svg: { fontCache: 'global' } };
+</script>
+<script async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+<style>
+  :root { --bg:#0f1220; --card:#1a1f33; --ink:#e7e9f3; --mut:#9aa3c0;
+          --acc:#6c8cff; --line:#2b3253; --ok:#3ecf8e; --err:#ff6b6b; }
+  * { box-sizing:border-box; }
+  body { margin:0; font-family:system-ui,Segoe UI,Roboto,Arial,sans-serif;
+         background:var(--bg); color:var(--ink); }
+  .wrap { max-width:860px; margin:0 auto; padding:28px 18px 60px; }
+  h1 { font-size:22px; margin:0 0 4px; }
+  p.sub { color:var(--mut); margin:0 0 22px; font-size:14px; }
+  .tabs { display:flex; gap:8px; margin-bottom:14px; }
+  .tab { padding:9px 16px; border-radius:10px; cursor:pointer; background:var(--card);
+         border:1px solid var(--line); color:var(--mut); font-size:14px; }
+  .tab.active { color:var(--ink); border-color:var(--acc); }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:18px; }
+  textarea { width:100%; min-height:160px; resize:vertical; background:#0c0f1c; color:var(--ink);
+             border:1px solid var(--line); border-radius:10px; padding:12px; font:14px/1.5 ui-monospace,Consolas,monospace; }
+  .row { display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-top:12px; }
+  button { background:var(--acc); color:#fff; border:0; padding:11px 20px; border-radius:10px;
+           font-size:15px; font-weight:600; cursor:pointer; }
+  button:disabled { opacity:.5; cursor:default; }
+  input[type=file] { color:var(--mut); font-size:14px; }
+  .hint { color:var(--mut); font-size:13px; }
+  .preview { margin-top:16px; padding:14px; background:#0c0f1c; border:1px dashed var(--line);
+             border-radius:10px; min-height:40px; }
+  .preview h4 { margin:0 0 8px; font-size:12px; color:var(--mut); text-transform:uppercase; letter-spacing:.5px; }
+  .msg { margin-top:14px; font-size:14px; }
+  .msg.ok { color:var(--ok); } .msg.err { color:var(--err); }
+  .hidden { display:none; }
+  code { background:#0c0f1c; padding:1px 6px; border-radius:6px; }
+  footer { color:var(--mut); font-size:12px; margin-top:26px; text-align:center; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>LaTeX → MathType (Word)</h1>
+  <p class="sub">Công thức bọc trong <code>$...$</code> sẽ thành đối tượng MathType OLE mở/sửa được trong Word.</p>
+
+  <div class="tabs">
+    <div class="tab active" data-tab="text">Dán văn bản</div>
+    <div class="tab" data-tab="file">Tải file Word</div>
+  </div>
+
+  <!-- TEXT -->
+  <div class="card" id="pane-text">
+    <textarea id="text" placeholder="Ví dụ:&#10;Câu 1: $\dfrac{-15}{27}$ và $a^2+b^2=c^2$&#10;Câu 2: $\sqrt{b^2-4ac}$">Câu 1: $\dfrac{-15}{27}$ và $a^2+b^2=c^2$
+Câu 2: $\sqrt{b^2-4ac}$ rồi $\sum_{i=1}^{n} i^2$.</textarea>
+    <div class="row">
+      <button id="btn-text">Chuyển &amp; tải .docx</button>
+      <span class="hint">Mỗi dòng = một đoạn.</span>
+    </div>
+    <div class="preview"><h4>Xem trước (MathJax)</h4><div id="preview"></div></div>
+  </div>
+
+  <!-- FILE -->
+  <div class="card hidden" id="pane-file">
+    <input type="file" id="file" accept=".docx"/>
+    <div class="row">
+      <button id="btn-file">Chuyển &amp; tải .docx</button>
+      <span class="hint">File gốc không bị thay đổi; bạn nhận file mới.</span>
+    </div>
+  </div>
+
+  <div class="msg" id="msg"></div>
+  <footer>Mở file trong Word → công thức hiển thị sẵn, double-click để sửa bằng MathType.</footer>
+</div>
+
+<script>
+const $ = s => document.querySelector(s);
+const tabs = document.querySelectorAll('.tab');
+tabs.forEach(t => t.onclick = () => {
+  tabs.forEach(x => x.classList.remove('active'));
+  t.classList.add('active');
+  const k = t.dataset.tab;
+  $('#pane-text').classList.toggle('hidden', k !== 'text');
+  $('#pane-file').classList.toggle('hidden', k !== 'file');
+});
+
+// live preview
+const ta = $('#text'), pv = $('#preview');
+function renderPreview() {
+  pv.innerHTML = ta.value.split('\n').map(l => l || '&nbsp;').join('<br>');
+  if (window.MathJax && MathJax.typesetPromise) MathJax.typesetPromise([pv]);
+}
+ta.addEventListener('input', () => { clearTimeout(window._t); window._t = setTimeout(renderPreview, 400); });
+window.addEventListener('load', renderPreview);
+
+function showMsg(text, ok) { const m = $('#msg'); m.textContent = text; m.className = 'msg ' + (ok ? 'ok' : 'err'); }
+
+async function download(resp, fallbackName) {
+  if (!resp.ok) {
+    let e = 'Lỗi ' + resp.status;
+    try { e = (await resp.json()).error || e; } catch {}
+    showMsg(e, false); return;
+  }
+  const stats = (resp.headers.get('X-Stats') || '0,0').split(',');
+  const blob = await resp.blob();
+  const cd = resp.headers.get('Content-Disposition') || '';
+  const m = cd.match(/filename="?([^"]+)"?/);
+  const name = m ? m[1] : fallbackName;
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href = url; a.download = name; a.click();
+  URL.revokeObjectURL(url);
+  showMsg(`Xong: chuyển ${stats[0]} công thức, bỏ qua ${stats[1]}. Đã tải ${name}.`, true);
+}
+
+$('#btn-text').onclick = async () => {
+  const btn = $('#btn-text'); btn.disabled = true; showMsg('Đang xử lý...', true);
+  try {
+    const resp = await fetch('/api/convert-text', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text: ta.value })
+    });
+    await download(resp, 'cong_thuc_mathtype.docx');
+  } catch (e) { showMsg('Lỗi mạng: ' + e, false); }
+  btn.disabled = false;
+};
+
+$('#btn-file').onclick = async () => {
+  const f = $('#file').files[0];
+  if (!f) { showMsg('Chưa chọn file .docx.', false); return; }
+  const btn = $('#btn-file'); btn.disabled = true; showMsg('Đang xử lý...', true);
+  try {
+    const fd = new FormData(); fd.append('file', f);
+    const resp = await fetch('/api/convert-docx', { method: 'POST', body: fd });
+    await download(resp, 'converted_mathtype.docx');
+  } catch (e) { showMsg('Lỗi mạng: ' + e, false); }
+  btn.disabled = false;
+};
+</script>
+</body>
+</html>

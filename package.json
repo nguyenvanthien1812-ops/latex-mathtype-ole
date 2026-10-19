@@ -1,0 +1,10 @@
+{
+  "name": "mathtype-mathjax-renderer",
+  "private": true,
+  "version": "8.0.0",
+  "dependencies": {
+    "@mathjax/src": "4.1.3",
+    "@mathjax/mathjax-termes-font": "4.1.3",
+    "@mathjax/mathjax-stix2-font": "4.1.3"
+  }
+}

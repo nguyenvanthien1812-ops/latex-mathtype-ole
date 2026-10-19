@@ -1,0 +1,3 @@
+# Chi can neu chay GUI desktop (gui.py). Server KHONG can.
+-r requirements.txt
+PyQt6>=6.5

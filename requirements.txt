@@ -1,0 +1,11 @@
+Flask==3.1.1
+flask-cors==6.0.1
+gunicorn==23.0.0
+python-docx==1.2.0
+lxml==6.0.0
+Markdown==3.8.2
+Pillow==11.3.0
+numpy==2.3.2
+matplotlib==3.10.5
+olefile==0.47
+CairoSVG==2.8.2
